@@ -88,7 +88,8 @@ def serialize(A):
 
         # otherwise, we need a copy to C order
         AC = A.copy('C')
-        return (ft, str(AC.data))
+        # import pdb; pdb.set_trace()
+        return (ft, AC.data.tobytes())
 
     if isinstance(A, int):
         return (DATATYPE_INT32, struct.pack('i', A))
@@ -331,14 +332,13 @@ class Client:
         if not(labels is None):
             serLabels = ''
             try:
-                for n in range(0, nChannels):
-                    serLabels += labels[n] + '\0'
+                slabels = b''.join(serLabels)
             except:
                 raise ValueError('Channels names (labels), if given,'
                                  ' must be a list of N=numChannels strings')
-
+            slabels = b"".join(serLabels)
             extras = struct.pack('II', CHUNK_CHANNEL_NAMES,
-                                 len(serLabels)) + serLabels
+                                 len(serLabels)) + slabels
             haveLabels = True
 
         if not(chunks is None):
@@ -479,6 +479,8 @@ class Client:
 
         request = struct.pack('HHI', VERSION, PUT_DAT, 16 + dataBufSize)
         dataDef = struct.pack('IIII', nChan, nSamp, dataType, dataBufSize)
+        # dataBuf = bytes(dataBuf.encode('ascii'))
+        # import pdb; pdb.set_trace()
         self.sendRaw(request + dataDef + dataBuf)
 
         (status, bufsize, resp_buf) = self.receiveResponse()
@@ -529,30 +531,30 @@ if __name__ == "__main__":
 
     ftc = Client()
 
-    print 'Trying to connect to buffer on %s:%i ...' % (hostname, port)
+    print('Trying to connect to buffer on %s:%i ...' % (hostname, port))
     ftc.connect(hostname, port)
 
-    print '\nConnected - trying to read header...'
+    print('\nConnected - trying to read header...')
     H = ftc.getHeader()
 
     if H is None:
-        print 'Failed!'
+        print('Failed!')
     else:
-        print H
-        print H.labels
+        print(H)
+        print(H.labels)
 
         if H.nSamples > 0:
-            print '\nTrying to read last sample...'
+            print('\nTrying to read last sample...')
             index = H.nSamples - 1
             D = ftc.getData([index, index])
-            print D
+            print(D)
 
         if H.nEvents > 0:
-            print '\nTrying to read (all) events...'
+            print('\nTrying to read (all) events...')
             E = ftc.getEvents()
             for e in E:
-                print e
+                print(e)
 
-    print ftc.poll()
+    print(ftc.poll())
 
     ftc.disconnect()
